@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        #profileImage {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .profile-border {
+            margin-bottom: 1rem;
+            /* Отступ снизу */
+            padding: 0.5rem;
+            /* Внутренние отступы */
+            border: 2px solid blue;
+            /* Светло-розовая граница */
+            border-radius: 50%;
+            /* Округление границы */
+            display: inline-block;
+            /* Позволяет элементу обернуть изображение */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Навигация -->
+    <nav class="flex justify-between items-center p-6 bg-white shadow-md custom-shadow">
+        <img src="logo.svg" alt="Ulyanovsk Logo" class="w-auto h-10">
+
+        <!-- Центрирование меню -->
+        <div class="flex-1 flex justify-center">
+            <div class="flex space-x-8">
+                <a href="index.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Главная</a>
+                <a href="flights.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Рейсы</a>
+                <a href="services.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Услуги</a>
+                <div id="adminPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+                <div id="operatorPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+                <div id="promoPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+            </div>
+        </div>
+
+        <div>
+            <a href="login.html">
+                <button class="border px-4 py-2 rounded hover:bg-gray-100 transition duration-300">Выйти</button>
+            </a>
+        </div>
+    </nav>
+
+
+    <!-- Личный кабинет -->
+    <section class="mx-10 mt-10">
+        <h2 class="text-3xl font-bold mb-6">Личный кабинет</h2>
+        <div class="bg-white p-6 shadow-md rounded-lg">
+
+            <div class="mt-4 text-center"> <!-- Добавлено выравнивание по центру -->
+                <div class="mb-4 p-2 border-2 border-blue-300 rounded-full inline-block">
+                    <img id="profileImage" class="rounded-full" style="width: 128px; height: 128px; object-fit: cover;">
+                </div>
+
+                <p class="mt-2"><span id="personalName"></span></p>
+                <p><span id="role" class="text-blue-500"></span></p>
+            </div>
+
+            <div class="mt-4 text-left">
+                <div id="pointsSection" style="display: none;"> <!-- Изначально скрыто -->
+                    <div class="flex justify-between items-center">
+                        <p><strong>Премиальные очки:</strong> <span id="balance"></span></p>
+                        <div id="exchangeButtonContainer" style="display: none;">
+                            <a href="points_tickets.html"
+                                class="bg-blue-500 text-white px-4 py-2 rounded inline-block transition duration-300 hover:bg-blue-600">Обменять</a>
+                        </div>
+                    </div>
+                    <hr class="border-t-2 border-blue-300 my-2"> <!-- Горизонтальная линия -->
+                </div>
+
+                <div id="milesSection" class="w-1/3" style="display: none;"> <!-- Изначально скрыто -->
+                    <p><strong>Налетано:</strong> <span id="flightHours"></span></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <script>
+        // Получаем данные пользователя из localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (user) {
+            // Заполняем поля данными пользователя
+            document.getElementById('personalName').textContent = user.personalName;
+            document.getElementById('role').textContent = user.roleID;  // Для роли можно добавить дополнительную логику
+            document.getElementById('flightHours').textContent = user.totalMiles + ' км';
+            document.getElementById('balance').textContent = user.balancePoints;
+
+            // Логика для управления видимостью
+            if (user.totalMiles > 0) {
+                document.getElementById('milesSection').style.display = 'block'; // Показываем секцию километров
+            } else {
+                document.getElementById('milesSection').style.display = 'none'; // Скрываем секцию километров
+            }
+
+            if (user.balancePoints > 0) {
+                document.getElementById('pointsSection').style.display = 'block'; // Показываем секцию очков
+            } else {
+                document.getElementById('pointsSection').style.display = 'none'; // Скрываем секцию очков
+            }
+
+            if (user.profileImage) {
+                const profileImagePath = `http://localhost:3000/${user.profileImage}`;
+                document.getElementById('profileImage').src = profileImagePath;
+            }
+
+            // Проверка роли для отображения кнопки "Обменять" и страницы "Акции"
+            if (user.roleID === "VIP-пользователь") {
+                // Отображение кнопки "Обменять"
+                document.getElementById('exchangeButtonContainer').style.display = 'block';
+
+                // Добавление ссылки на страницу "Акции"
+                const promoLink = document.createElement('a');
+                promoLink.href = "promo.html";  // Ссылка на страницу "Акции"
+                promoLink.textContent = "Акции";
+                document.getElementById('promoPanelLink').appendChild(promoLink);  // Добавляем ссылку в навигацию
+            } else {
+                // Скрытие кнопки "Обменять" и ссылки на страницу "Акции" для других пользователей
+                document.getElementById('exchangeButtonContainer').style.display = 'none';
+                document.getElementById('promoPanelLink').style.display = 'none';  // Скрываем ссылку на страницу "Акции"
+            }
+
+            // Проверка для отображения админ-панели, если роль пользователя "Администратор"
+            if (user.roleID === "Администратор") {
+                const adminLink = document.createElement('a');
+                adminLink.href = "admin.html";
+                adminLink.textContent = "Админ-панель";
+                document.getElementById('adminPanelLink').appendChild(adminLink);  // Добавляем ссылку в навигацию
+            } else {
+                document.getElementById('adminPanelLink').style.display = 'none';  // Скрываем ссылку на админ-панель для других пользователей
+            }
+
+            if (user.roleID === "Оператор") {  // Замените на user.roleID === 3, если это числовой идентификатор
+                const operatorLink = document.createElement('a');
+                operatorLink.href = "operator_panel.html";
+                operatorLink.textContent = "Оператор-панель";
+                document.getElementById('operatorPanelLink').appendChild(operatorLink);  // Добавляем ссылку в навигацию
+            } else {
+                document.getElementById('operatorPanelLink').style.display = 'none';  // Скрываем ссылку для других пользователей
+            }
+
+        } else {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <!-- Футер -->
+    <footer class="bg-white p-6 mt-10 shadow-md">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-600" a href="mailto:info@ulyanovsk.com" class="text-blue-500">info@ulyanovsk.com</a></p>
+            <p class="text-gray-600 mt-2">
+                <a href="privacy_policy.html" class="text-blue-500">Политика конфиденциальности</a>
+            </p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

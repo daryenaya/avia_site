@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Акции</title>
+    <script defer src="script.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Навигация -->
+    <nav class="flex justify-between items-center p-6 bg-white shadow-md custom-shadow">
+        <img src="logo.svg" alt="Ulyanovsk Logo" class="w-auto h-10">
+
+        <!-- Центрирование меню -->
+        <div class="flex-1 flex justify-center">
+            <div class="flex space-x-8">
+                <a href="index.html" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Главная</a>
+                <a href="flights.html" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Рейсы</a>
+                <a href="services.html" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Услуги</a>
+                <a href="promo.html" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Акции</a>
+                <div id="adminPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+                <div id="operatorPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+            </div>
+        </div>
+
+        <div id="profileSection"></div>
+    </nav>
+
+<!-- Акции -->
+<section class="mx-10 mt-10">
+    <h2 class="text-3xl font-bold">Наши акции</h2>
+
+    <!-- Список акций -->
+    <div id="promotions-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
+        <!-- Карточки акций будут вставляться динамически -->
+    </div>
+
+    </section>
+
+
+    <script>
+        // Получаем элемент для отображения профиля
+        const profileSection = document.getElementById('profileSection');
+
+        function updateProfileButton() {
+            const user = JSON.parse(localStorage.getItem('user'));
+
+            profileSection.innerHTML = '';
+
+            if (user) {
+                const profileButton = document.createElement('a');
+                profileButton.href = 'profile.html';
+                profileButton.innerHTML = '<button class="border px-4 py-2 rounded hover:bg-gray-100 transition duration-300 mr-4">Профиль</button>';
+                profileSection.appendChild(profileButton);
+
+                const logoutButton = document.createElement('button');
+                logoutButton.innerText = 'Выйти';
+                logoutButton.classList = 'border px-4 py-2 rounded hover:bg-gray-100 transition duration-300';
+                logoutButton.onclick = function () {
+                    localStorage.removeItem('user');
+                    window.location.reload();
+                };
+                profileSection.appendChild(logoutButton);
+
+                if (user.roleID === "Администратор") {
+                    const adminLink = document.createElement('a');
+                    adminLink.href = "admin.html";
+                    adminLink.textContent = "Админ-панель";
+                    adminLink.classList.add("ml-4", "hover:text-blue-700");
+                    adminPanelLink.appendChild(adminLink);
+                }if (user.roleID === "Оператор") {
+                    const operatorLink = document.createElement('a');
+                    operatorLink.href = "operator_panel.html";
+                    operatorLink.textContent = "Оператор-панель";
+                    document.getElementById('operatorPanelLink').appendChild(operatorLink);
+                } else {
+                    document.getElementById('operatorPanelLink').style.display = 'none';
+                }
+
+            } else {
+                const loginButton = document.createElement('a');
+                loginButton.href = 'login.html';
+                loginButton.innerHTML = '<button class="border px-4 py-2 rounded hover:bg-gray-100 transition duration-300">Личный кабинет</button>';
+                profileSection.appendChild(loginButton);
+            }
+        }
+
+        updateProfileButton();
+    </script>
+
+<script>
+async function fetchPromotions() {
+    try {
+        const response = await fetch("http://localhost:3000/api/promotions");
+        const promotions = await response.json();
+        const container = document.getElementById("promotions-container");
+
+        let imageIndex = 4; // Начинаем нумерацию с 4
+
+        promotions.forEach(promo => {
+            const promoCard = document.createElement("div");
+            promoCard.className = "border bg-white p-6 rounded shadow-lg";
+
+            // Форматируем дату
+            const formattedStartDate = formatDate(promo.start_date);
+            const formattedEndDate = formatDate(promo.end_date);
+
+            promoCard.innerHTML = `
+                <img src="http://localhost:3000/uploads/${imageIndex}-image.jpg" alt="${promo.title}" class="w-full h-48 object-cover rounded-t">
+                <h3 class="text-xl font-semibold mt-4">${promo.title}</h3>
+                <p class="mt-4 text-gray-600">${promo.description}</p>
+                <p class="mt-2 text-gray-500 mt-6"><strong>Срок действия акции:</strong> <br> ${formattedStartDate} - ${formattedEndDate}</p>
+            `;
+
+            container.appendChild(promoCard);
+            imageIndex++; // Увеличиваем индекс для следующего изображения
+        });
+    } catch (error) {
+        console.error("Ошибка загрузки акций:", error);
+    }
+}
+
+// Функция для форматирования даты в нужный формат
+function formatDate(dateString) {
+    const months = [
+        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year} г.`;
+}
+
+fetchPromotions();
+
+    </script>
+
+    <!-- Футер -->
+    <footer class="bg-white p-6 mt-10 shadow-md">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-600">info@ulyanovsk.com</p>
+            <p class="text-gray-600 mt-2">
+                <a href="privacy_policy.html" class="text-blue-500">Политика конфиденциальности</a>
+            </p>
+        </div>
+    </footer>
+</body>
+
+</html>
