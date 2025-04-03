@@ -88,10 +88,10 @@
                     userTableBody.innerHTML = '';
     
                     // Фильтруем пользователей по roleID (1 или 4)
-                    const filteredUsers = users.filter(user => [1, 4].includes(user.roleid));
+                    const filteredUsers = users.filter(user => [1, 4].includes(user.roleID));
                     console.log("Все роли пользователей:", users.map(u => ({
   name: u.personalname,
-  role: u.roleid
+  role: u.roleID
 })));
     
                     if (filteredUsers.length === 0) {
