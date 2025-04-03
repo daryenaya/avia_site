@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обмен очков на билеты</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Навигация -->
+    <nav class="flex justify-between items-center p-6 bg-white shadow-md custom-shadow">
+        <img src="logo.svg" alt="Ulyanovsk Logo" class="w-auto h-10">
+
+        <!-- Центрирование меню -->
+        <div class="flex-1 flex justify-center">
+            <div class="flex space-x-8">
+                <a href="index.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Главная</a>
+                <a href="flights.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Рейсы</a>
+                <a href="services.html"
+                    class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">Услуги</a>
+                <div id="adminPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300"></div>
+                <div id="operatorPanelLink" class="px-4 py-2 rounded-md hover:text-blue-500 transition duration-300">
+                </div>
+            </div>
+        </div>
+        <div id="profileSection"></div>
+    </nav>
+
+    <!-- Модальное окно уведомления -->
+    <div id="successModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center hidden">
+        <div class="bg-white p-6 rounded shadow-lg max-w-md w-full text-center">
+            <h3 class="text-2xl font-bold mb-4">Успешный обмен!</h3>
+            <p class="text-lg mb-4">Вы успешно обменяли очки на билет</p>
+            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+                onclick="closeModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Заголовок страницы -->
+    <section class="mx-10 mt-10">
+        <h2 class="text-3xl font-bold mb-6">Доступные билеты</h2>
+
+        <!-- Уведомление о покупке только одного билета -->
+        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-400 p-4 mb-4">
+            <p>Вы можете купить только один билет с использованием премиальных очков</p>
+        </div>
+
+        <div id="ticketList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Ваши карточки билетов здесь -->
+            <!-- Пример для билета SU404 -->
+            <div class="ticket-card bg-white border-2 border-blue-300 shadow-lg rounded-xl p-6 flex flex-col relative">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold">SU404</h3>
+                    <span
+                        class="text-sm font-bold text-blue-300 bg-white border-2 border-blue-300 px-3 py-1 rounded-full">Бизнес</span>
+                </div>
+                <p class="text-lg font-semibold mt-3">Ульяновск — Санкт-Петербург</p>
+                <div class="flex justify-between mt-3 text-sm">
+                    <p>Вылет: <strong>10.04.2025</strong></p>
+                    <p>Прибытие: <strong>10.04.2025</strong></p>
+                </div>
+                <div class="flex justify-between mt-2 text-sm">
+                    <p>Количество мест: <strong>12</strong></p>
+                </div>
+                <p class="text-2xl font-bold mt-4">10000.00 ₽</p>
+                <button class="mt-5 bg-blue-500 text-white font-semibold px-3 py-2 rounded shadow-md"
+                    onclick="exchangePoints(7000)">
+                    Обменять
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+    <script>
+        // Функция для отображения модального окна
+        function exchangePoints(points) {
+            // Показываем модальное окно
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        // Функция для закрытия модального окна
+        function closeModal() {
+            document.getElementById('successModal').classList.add('hidden');
+        }
+    </script>
+
+
+
+<script>
+    // Проверка, есть ли данные пользователя в localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+    const profileSection = document.getElementById('profileSection');
+
+    if (user) {
+        // Если данные есть, отображаем кнопку "Профиль" и "Выйти"
+        const profileButton = document.createElement('a');
+        profileButton.href = 'profile.html';
+        profileButton.innerHTML = '<button class="border px-4 py-2 rounded hover:bg-gray-100 transition duration-300 mr-4">Профиль</button>';  // Добавлен класс 'mr-4' для отступа справа
+        profileSection.appendChild(profileButton);
+
+        const logoutButton = document.createElement('button');
+        logoutButton.innerText = 'Выйти';
+        logoutButton.classList = 'border px-4 py-2 rounded hover:bg-gray-100 transition duration-300';
+        logoutButton.onclick = function () {
+            localStorage.removeItem('user'); // Удаляем данные пользователя
+            window.location.reload(); // Перезагружаем страницу
+        };
+        profileSection.appendChild(logoutButton);
+
+        // Отображение админ-панели, если роль пользователя "VIP=пользователь"
+        if (user.roleID === "VIP-пользователь") {
+            const adminLink = document.createElement('a');
+            adminLink.href = "promo.html";
+            adminLink.textContent = "Акции";
+            adminLink.classList.add("ml-4", "hover:text-blue-700");
+            adminPanelLink.appendChild(adminLink);
+        }
+
+        // Отображение админ-панели, если роль пользователя "Администратор"
+        if (user.roleID === "Администратор") {
+            const adminLink = document.createElement('a');
+            adminLink.href = "admin.html";
+            adminLink.textContent = "Админ-панель";
+            adminLink.classList.add("ml-4", "hover:text-blue-700");
+            adminPanelLink.appendChild(adminLink);
+        }
+
+        if (user.roleID === "Оператор") {  // Замените на user.roleID === 3, если это числовой идентификатор
+            const operatorLink = document.createElement('a');
+            operatorLink.href = "operator_panel.html";
+            operatorLink.textContent = "Оператор-панель";
+            document.getElementById('operatorPanelLink').appendChild(operatorLink);  // Добавляем ссылку в навигацию
+        } else {
+            document.getElementById('operatorPanelLink').style.display = 'none';  // Скрываем ссылку для других пользователей
+        }
+
+    } else {
+        // Если данных нет, отображаем кнопку "Личный кабинет"
+        const loginButton = document.createElement('a');
+        loginButton.href = 'login.html';
+        loginButton.innerHTML = '<button class="border px-4 py-2 rounded hover:bg-gray-100 transition duration-300">Личный кабинет</button>';
+        profileSection.appendChild(loginButton);
+    }
+
+    const feedbackSection = document.getElementById('feedbackSection');
+</script>
+
+
+    <!-- Футер -->
+    <footer class="bg-white p-6 mt-10 shadow-md">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-600" a href="mailto:info@ulyanovsk.com" class="text-blue-500">info@ulyanovsk.com</a>
+            </p>
+            <p class="text-gray-600 mt-2">
+                <a href="privacy_policy.html" class="text-blue-500">Политика конфиденциальности</a>
+            </p>
+        </div>
+    </footer>
+
+</body>
+
+</html>
