@@ -14,11 +14,10 @@ const pool = new Pool({
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  port: 3000,
-  ssl: {
-    rejectUnauthorized: false // Для Neon.tech
-  },
-  connectionString: process.env.DATABASE_URL + "?sslmode=require"
+  port: 5432,
+  ssl: { 
+    rejectUnauthorized: false // Обязательно для Neon.tech!
+  }
 });
 
 // Middleware
