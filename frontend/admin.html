@@ -88,7 +88,7 @@
                     userTableBody.innerHTML = '';
     
                     // Фильтруем пользователей по roleID (1 или 4)
-                    const filteredUsers = users.filter(user => user.roleid === 1 || user.roleid === 4);
+                    const filteredUsers = users.filter(user => user.roleID === 1 || user.roleID === 4);
     
                     if (filteredUsers.length === 0) {
                         showNotification('Нет пользователей с выбранной ролью.');
