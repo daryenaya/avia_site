@@ -1,279 +1,249 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const app = express();
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
+// Настройка подключения к PostgreSQL
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: 5432,
+  ssl: {
+    rejectUnauthorized: false // Для Neon.tech
+  }
+});
+
+// Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Подключение к базе данных
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '@Hasbik1609D',
-    database: 'avia_db'
-});
+// Проверка подключения к БД
+pool.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch(err => console.error('Connection error:', err));
 
-app.get('/', (req, res) => {
-    res.send('Сервер работает! Добро пожаловать в API.');
-});
-
-
-// Указываем правильный путь к frontend
+// Статические файлы
 const frontendPath = path.join(__dirname, '..', 'frontend');
 app.use(express.static(frontendPath));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'login.html'));
-});
-
-db.connect(err => {
-    if (err) {
-        console.error('Ошибка подключения к БД:', err);
-    } else {
-        console.log('Подключение к MySQL успешно!');
-    }
-});
-
-// Middleware для обработки JSON данных
-app.use(bodyParser.json());
-app.use(cors());
-
-
-app.get('/get-username', (req, res) => {
-    if (!req.session.userID) {
-        return res.status(401).json({ error: 'Не авторизован' });
-    }
-
-    res.json({ username: req.session.username });
-});
-
 app.use('/uploads', express.static('uploads'));
 
+// Маршруты
+app.get('/', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'login.html'));
+});
 
+// Получение имени пользователя (требует настройки сессий)
+app.get('/get-username', async (req, res) => {
+  try {
+    // Реализуйте логику сессий через JWT или библиотеку сессий
+    res.status(501).json({ error: 'Not implemented' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // API для получения списка акций
-app.get("/api/promotions", (req, res) => {
-    db.query("SELECT * FROM promotions", (err, results) => {
-        if (err) {
-            console.error("Ошибка запроса:", err);
-            res.status(500).json({ error: "Ошибка сервера" });
-            return;
-        }
-        res.json(results);
-    });
+app.get("/api/promotions", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM promotions");
+    res.json(rows);
+  } catch (err) {
+    console.error("Ошибка запроса:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
 });
 
-// API для обработки отправки сообщения
-app.post('/api/messages', (req, res) => {
+// Обработка сообщений
+app.post('/api/messages', async (req, res) => {
+  try {
     const { username, message } = req.body;
+    const { rows } = await pool.query(
+      'INSERT INTO messages (username, message) VALUES ($1, $2) RETURNING *',
+      [username, message]
+    );
+    res.json({ success: true, data: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
 
-    if (!username || !message) {
-        return res.status(400).json({ success: false, message: 'Не все поля заполнены' });
+// Получение сообщений
+app.get('/api/messages', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM messages');
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// Удаление сообщения
+app.delete('/api/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rowCount } = await pool.query('DELETE FROM messages WHERE id = $1', [id]);
+    
+    if (rowCount > 0) {
+      res.status(200).send('Сообщение удалено');
+    } else {
+      res.status(404).send('Сообщение не найдено');
     }
-
-    const query = 'INSERT INTO messages (username, message) VALUES (?, ?)';
-    db.query(query, [username, message], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: 'Ошибка при сохранении сообщения' });
-        }
-        res.json({ success: true, message: 'Сообщение успешно отправлено' });
-    });
+  } catch (err) {
+    console.error('Ошибка удаления:', err);
+    res.status(500).send('Ошибка сервера');
+  }
 });
 
-app.get('/api/messages', (req, res) => {
-    const query = 'SELECT * FROM messages';
-    db.query(query, (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: 'Ошибка при получении сообщений' });
-        }
-        res.json(result);
-    });
-});
-
-// Обработчик для DELETE-запроса
-app.delete('/api/messages/:id', (req, res) => {
-    const messageId = req.params.id; // Получаем ID сообщения из URL
-
-    // Запрос для удаления записи из таблицы 'messages'
-    db.query('DELETE FROM messages WHERE id = ?', [messageId], (err, result) => {
-        if (err) {
-            console.error('Ошибка при удалении записи:', err);
-            res.status(500).send('Ошибка сервера');
-            return;
-        }
-
-        if (result.affectedRows > 0) {
-            res.status(200).send('Сообщение удалено');
-        } else {
-            res.status(404).send('Сообщение не найдено');
-        }
-    });
-});
-
-
-// Настройка multer для загрузки файлов
+// Загрузка файлов
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Папка для хранения изображений
-    },
-    filename: function (req, file, cb) {
-        const userID = req.body.userID;
-        const fileExtension = path.extname(file.originalname);
-        cb(null, `${userID}_profile${fileExtension}`);
-    }
-});
-
-const upload = multer({ storage: storage });
-
-// Маршрут для загрузки изображения профиля
-app.post('/uploadProfileImage', upload.single('profileImage'), (req, res) => {
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
     const userID = req.body.userID;
-    const filePath = 'uploads/${req.file.filename}';
+    const ext = path.extname(file.originalname);
+    cb(null, `${userID}_profile${ext}`);
+  }
+});
+const upload = multer({ storage });
 
-    // Обновление пути к изображению в базе данных
-    const sql = 'UPDATE users SET profileImage = ? WHERE userID = ?';
-    db.query(sql, [filePath, userID], (err, results) => {
-        if (err) {
-            console.error('Ошибка обновления профиля:', err);
-            return res.status(500).json({ error: 'Ошибка обновления профиля' });
-        }
-        res.json({ message: 'Изображение профиля обновлено', filePath });
-    });
+app.post('/uploadProfileImage', upload.single('profileImage'), async (req, res) => {
+  try {
+    const userID = req.body.userID;
+    const filePath = `uploads/${req.file.filename}`;
+
+    const { rows } = await pool.query(
+      'UPDATE users SET profileImage = $1 WHERE userID = $2 RETURNING *',
+      [filePath, userID]
+    );
+    
+    res.json({ message: 'Изображение обновлено', data: rows[0] });
+  } catch (err) {
+    console.error('Ошибка обновления:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// Маршрут для обработки входа пользователя
-app.post('/login', (req, res) => {
+// Авторизация
+app.post('/login', async (req, res) => {
+  try {
     const { login, password } = req.body;
+    const userQuery = await pool.query(
+      'SELECT u.*, r.roleName FROM users u LEFT JOIN roles r ON u.roleID = r.roleID WHERE login = $1 AND password = $2',
+      [login, password]
+    );
 
-    // Проверка логина и пароля в базе данных
-    const sql = 'SELECT * FROM users WHERE login = ? AND password = ?';
-    db.query(sql, [login, password], (err, results) => {
-        if (err) {
-            console.error('Ошибка при проверке данных пользователя:', err);
-            return res.status(500).json({ message: 'Ошибка при проверке данных пользователя' });
-        }
+    if (userQuery.rows.length === 0) {
+      return res.status(401).json({ message: 'Неверные данные' });
+    }
 
-        if (results.length > 0) {
-            const user = results[0];
-
-            // Получаем информацию о роли
-            const roleSql = 'SELECT roleName FROM roles WHERE roleID = ?';
-            db.query(roleSql, [user.roleID], (err, roleResults) => {
-                if (err) {
-                    console.error('Ошибка при получении роли:', err);
-                    return res.status(500).json({ message: 'Ошибка при получении роли' });
-                }
-
-                const userRole = roleResults.length > 0 ? roleResults[0].roleName : 'Unknown';
-                const userData = {
-                    userID: user.userID,
-                    login: user.login,
-                    personalName: user.personalName,
-                    roleID: userRole,
-                    balancePoints: user.balancePoints,
-                    totalMiles: user.totalMiles,
-                    profileImage: user.profileImage
-                };
-
-                res.json(userData); // Отправляем данные пользователя в ответ
-            });
-        } else {
-            res.status(401).json({ message: 'Неверный логин или пароль' });
-        }
+    const user = userQuery.rows[0];
+    res.json({
+      userID: user.userid,
+      login: user.login,
+      personalName: user.personalname,
+      roleID: user.rolename,
+      balancePoints: user.balancepoints,
+      totalMiles: user.totalmiles,
+      profileImage: user.profileimage
     });
+  } catch (err) {
+    console.error('Ошибка авторизации:', err);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
 });
 
-// Маршрут для обработки рейсов
-app.get('/api/flights', (req, res) => {
-    const sql = `
-        SELECT 
-            f.flightID,
-            f.departureDate,
-            f.arrivalDate,
-            f.departureFrom,
-            f.destinationTo,
-            f.availableSeats,
-            f.price,
-            f.flightNumber,
-            t.name AS tariffName
-        FROM flight f
-        JOIN tariff t ON f.tariffID = t.tariffID
-    `;
-
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error('Ошибка при получении данных о рейсах:', err);
-            return res.status(500).json({ error: 'Ошибка сервера' });
-        }
-        res.json(results);
-    });
+// Рейсы
+app.get('/api/flights', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT 
+        f.flightid AS "flightID",
+        f.departuredate AS "departureDate",
+        f.arrivaldate AS "arrivalDate",
+        f.departurefrom AS "departureFrom",
+        f.destinationto AS "destinationTo",
+        f.availableseats AS "availableSeats",
+        f.price,
+        f.flightnumber AS "flightNumber",
+        t.name AS "tariffName"
+      FROM flight f
+      JOIN tariff t ON f.tariffid = t.tariffid
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Ошибка получения рейсов:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// Маршрут для получения всех пользователей, кроме администратора
-app.get('/users', (req, res) => {
-    const query = "SELECT * FROM USERS WHERE roleID != 2";  // 2 — это ID роли администратора, предположительно
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Ошибка выполнения запроса:', err);
-            res.status(500).send('Ошибка сервера');
-            return;
-        }
-        res.json(results);  // Отправляем данные на клиент
-    });
+// Пользователи
+app.get('/users', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT 
+        u.userid AS "userID",
+        u.login,
+        u.personalname AS "personalName",
+        u.totalmiles AS "totalMiles",
+        u.balancepoints AS "balancePoints",
+        r.rolename AS "roleName"
+      FROM users u
+      LEFT JOIN roles r ON u.roleid = r.roleid
+      WHERE u.roleid != 2
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Ошибка получения пользователей:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.get('/users', (req, res) => {
-    const query = `
-        SELECT users.userID, users.login, users.password, users.personalName, 
-               users.totalMiles, users.balancePoints, roles.roleName
-        FROM users
-        LEFT JOIN roles ON users.roleID = roles.roleID;
-    `;
+// Удаление пользователя
+app.delete('/users/:personalName', async (req, res) => {
+  try {
+    const { personalName } = req.params;
+    const { rowCount } = await pool.query(
+      'DELETE FROM users WHERE personalName = $1',
+      [personalName]
+    );
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error('Ошибка при выполнении запроса:', err);
-            return res.status(500).json({ error: 'Ошибка при получении данных' });
-        }
-
-        console.log('Результаты запроса:', results);  // Логируем результаты запроса
-        res.json(results);  // Отправляем данные в формате JSON
-    });
+    if (rowCount > 0) {
+      res.json({ message: 'Пользователь удалён' });
+    } else {
+      res.status(404).json({ message: 'Пользователь не найден' });
+    }
+  } catch (err) {
+    console.error('Ошибка удаления:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// Обработчик для удаления пользователя
-app.delete('/users/:personalName', (req, res) => {
-    const personalName = req.params.personalName;
-
-    const query = 'DELETE FROM users WHERE personalName = ?';
-
-    db.query(query, [personalName], (err, result) => {
-        if (err) {
-            console.error('Ошибка при удалении пользователя:', err);
-            return res.status(500).json({ message: 'Не удалось удалить пользователя' });
-        }
-
-        if (result.affectedRows > 0) {
-            return res.status(200).json({ message: 'Пользователь успешно удален' });
-        } else {
-            return res.status(404).json({ message: 'Пользователь не найден' });
-        }
-    });
+// Добавление пользователя
+app.post('/api/users', async (req, res) => {
+  try {
+    const { login, password, personalName, roleID } = req.body;
+    const { rows } = await pool.query(
+      'INSERT INTO users (login, password, personalName, roleID) VALUES ($1, $2, $3, $4) RETURNING *',
+      [login, password, personalName, roleID]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Ошибка добавления:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// Маршрут для статических файлов (изображения)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Запуск сервера
 app.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
+
+module.exports = app;
