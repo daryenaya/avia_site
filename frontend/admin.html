@@ -36,18 +36,16 @@
                 <h3 class="text-xl font-semibold">Список пользователей</h3>
                 <div class="flex gap-2">
                     <select id="roleFilter" class="border rounded px-2 py-1">
-                        <option value="all">Все роли</option>
-                        <option value="1">Пользователи</option>
-                        <option value="4">VIP</option>
+                        <option value="all">Все пользователи</option>
+                        <option value="4">Только VIP</option>
                     </select>
-                    <input type="text" id="searchInput" placeholder="Поиск..." class="border rounded px-2 py-1">
+                    <input type="text" id="searchInput" placeholder="Поиск по имени..." class="border rounded px-2 py-1">
                 </div>
             </div>
             <table class="min-w-full border-collapse border border-gray-300">
                 <thead>
                     <tr>
                         <th class="border border-gray-300 px-4 py-2">Имя</th>
-                        <th class="border border-gray-300 px-4 py-2">Роль</th>
                         <th class="border border-gray-300 px-4 py-2">Налетано км</th>
                         <th class="border border-gray-300 px-4 py-2">Очки</th>
                         <th class="border border-gray-300 px-4 py-2">Действия</th>
@@ -85,12 +83,12 @@
         async function fetchUsers() {
             try {
                 const response = await fetch('https://avia-site.onrender.com/users');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) throw new Error(`Ошибка загрузки: ${response.status}`);
                 
                 const users = await response.json();
                 renderUsers(users);
             } catch (error) {
-                showNotification(`Ошибка загрузки: ${error.message}`);
+                showNotification(`Ошибка: ${error.message}`);
             }
         }
 
@@ -116,32 +114,20 @@
             filtered.forEach(user => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="border px-4 py-2 ${user.roleID === 4 ? 'text-blue-600' : ''}">
+                    <td class="border px-4 py-2 ${user.roleID === 4 ? 'text-blue-600 font-medium' : ''}">
                         ${user.personalName || 'Не указано'}
                     </td>
-                    <td class="border px-4 py-2">${getRoleName(user.roleID)}</td>
                     <td class="border px-4 py-2">${user.totalMiles ?? '0'} км</td>
                     <td class="border px-4 py-2">${user.balancePoints ?? '0'}</td>
                     <td class="border px-4 py-2">
                         <button onclick="openConfirmDeleteModal(${user.userID})" 
-                            class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                            class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors">
                             Удалить
                         </button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
-        }
-
-        // Получение названия роли
-        function getRoleName(roleID) {
-            const roles = {
-                1: 'Пользователь',
-                2: 'Администратор',
-                3: 'Оператор',
-                4: 'VIP'
-            };
-            return roles[roleID] || 'Неизвестно';
         }
 
         // Управление модальными окнами
