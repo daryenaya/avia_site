@@ -95,46 +95,48 @@
                     }
     
                     filteredUsers.forEach(user => {
-                        console.log("Данные пользователя:", user);  // Проверяем, что приходит для каждого пользователя
+    const row = document.createElement('tr');
+
+    // Имя пользователя
+    const userNameCell = document.createElement('td');
+    userNameCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
+    const userNameText = document.createElement('span');
+    userNameText.textContent = user.personalname || 'Не указано'; // snake_case
     
-                        const row = document.createElement('tr');
+    if (user.roleid === 4) { // snake_case
+        userNameText.style.color = 'blue';
+    }
     
-                        // Создаем ячейку для имени с проверкой roleID и окрашиванием имени
-                        const userNameCell = document.createElement('td');
-                        userNameCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
-    
-                        const userNameText = document.createElement('span');
-                        userNameText.textContent = user.personalName || 'Не указано';
-    
-                        // Проверяем roleID и применяем стиль
-                        if (user.roleID === 4) {
-                            userNameText.style.color = 'blue'; // Окрашиваем в синий цвет
-                        }
-    
-                        userNameCell.appendChild(userNameText);
-    
-                        // Добавляем ячейки для других данных
-                        const milesCell = document.createElement('td');
-                        milesCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
-                        milesCell.textContent = user.totalMiles || 'Не указано' + ' км';
-    
-                        const balanceCell = document.createElement('td');
-                        balanceCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
-                        balanceCell.textContent = user.balancePoints || 'Не указано';
-    
-                        const actionsCell = document.createElement('td');
-                        actionsCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
-                        actionsCell.innerHTML = `<button class="bg-red-500 text-white px-3 py-1 rounded inline-block hover:bg-red-600" onclick="openConfirmDeleteModal('${user.personalName}')">Удалить</button>`;
-    
-                        // Добавляем ячейки в строку
-                        row.appendChild(userNameCell);
-                        row.appendChild(milesCell);
-                        row.appendChild(balanceCell);
-                        row.appendChild(actionsCell);
-    
-                        // Добавляем строку в таблицу
-                        userTableBody.appendChild(row);
-                    });
+    userNameCell.appendChild(userNameText);
+
+    // Налетанные километры
+    const milesCell = document.createElement('td');
+    milesCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
+    milesCell.textContent = (user.totalmiles || 'Не указано') + ' км'; // snake_case
+
+    // Баланс очков
+    const balanceCell = document.createElement('td');
+    balanceCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
+    balanceCell.textContent = user.balancepoints || 'Не указано'; // snake_case
+
+    // Действия
+    const actionsCell = document.createElement('td');
+    actionsCell.classList.add('border', 'border-gray-300', 'px-4', 'py-2');
+    actionsCell.innerHTML = `
+        <button 
+            class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600" 
+            onclick="openConfirmDeleteModal('${user.personalname}')" // snake_case
+        >
+            Удалить
+        </button>
+    `;
+
+    row.appendChild(userNameCell);
+    row.appendChild(milesCell);
+    row.appendChild(balanceCell);
+    row.appendChild(actionsCell);
+    userTableBody.appendChild(row);
+});
                 } else {
                     showNotification('Нет данных для отображения.');
                 }
